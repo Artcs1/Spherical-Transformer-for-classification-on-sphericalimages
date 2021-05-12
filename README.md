@@ -1,0 +1,1 @@
+# Spherical-Transformer-for-classification-on-sphericalimages
