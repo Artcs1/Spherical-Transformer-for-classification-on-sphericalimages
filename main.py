@@ -8,31 +8,20 @@ from timm.data.transforms_factory import create_transform
 from get_tangentplanes import get_tangent_images
 from spherical_distortion.util import *
 import matplotlib.pyplot as plt
+import math
 
-
-
-def coord_3d(X,dim):
-    phi   = X[:,1]/dim[1] * np.pi     # phi
-    theta = X[:,0]/dim[0] * 2 * np.pi         # theta
-    R = np.stack([(np.sin(phi) * np.cos(theta)).T,(np.sin(phi) * np.sin(theta)).T,np.cos(phi).T], axis=1)
-
-    return R
-
-def multiple_tangentimages(img = 'class_256.jpg', patch = 32, image =384, base_order =1): #TODO: ARRUMAR O ORDEM
+def multiple_tangentimages(img = 'class_256.jpg', patch = 32, image =384, base_order =2): #BASE_ORDER REGULA O EXTENDIMENTO DE CADA PLANO TANGENTE
 
     scale_factor = 1
     pi_samp = int(image/patch)
 
-    theta, phi = np.meshgrid(np.linspace(-np.pi,np.pi, num = pi_samp, endpoint=False), np.linspace(-np.pi/2,np.pi/2, num = pi_samp, endpoint=False))
-    points = np.stack([(np.sin(phi) * np.cos(theta)).T,(np.sin(phi) * np.sin(theta)).T,np.cos(phi).T], axis=2)
-    points = np.reshape(points, (-1,3))
-    points = points.astype('float32')
-    points = torch.from_numpy(points)
-    icosphere     = generate_icosphere(1)
-    #points = icosphere.get_face_barycenters()
-    #print(points)
-    #spherical_coords = convert_3d_to_spherical(points)
-    #print(spherical_coords)
+    theta   = np.linspace(-np.pi/2, np.pi/2, num = pi_samp, endpoint = False)
+    phi = np.linspace(-np.pi, np.pi, num = pi_samp, endpoint = False)
+
+    c, d = np.meshgrid(phi,theta)
+    S = np.stack((c.flat,d.flat),axis=1)
+    S = torch.from_numpy(S.astype('float32'))
+    points = convert_spherical_to_3d(S)
     tex_image = get_tangent_images(img, scale_factor, base_order, points, patch)
 
     generate_image = np.zeros((image,image,3),dtype='uint8')
@@ -40,6 +29,7 @@ def multiple_tangentimages(img = 'class_256.jpg', patch = 32, image =384, base_o
         img = tex_image[:, i, ...]
         I2 = torch2numpy(img.byte())
         generate_image[int(patch*(i//pi_samp)):int(patch*(i//pi_samp)+patch),int(patch*(i%pi_samp)):int(patch*(i%pi_samp)+patch),:] = I2
+
 
     return generate_image
 
