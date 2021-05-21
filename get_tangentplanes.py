@@ -116,12 +116,19 @@ def get_tangent_images(image_path, scale_factor, base_order, points, num_samples
     tex_image = tangent_images(img, base_order, sample_order, points, num_samples).byte()
 
 
-    for i in range(tex_image.shape[1]):
-        img = tex_image[:, i, ...]
+    #for i in range(tex_image.shape[1]):
+    #    img = tex_image[:, i, ...]
 
-        I2 = torch2numpy(img.byte())
+    #   I2 = torch2numpy(img.byte())
 
     return tex_image
+
+
+def get_tangent_images2(img, base_order, points, num_samples, sample_order = 7):
+    tex_image = tangent_images(img, base_order, sample_order, points, num_samples).byte()
+
+    return tex_image
+
 
 def main():
 
@@ -149,5 +156,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 

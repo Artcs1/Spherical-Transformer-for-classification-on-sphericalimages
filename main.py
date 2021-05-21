@@ -10,26 +10,37 @@ from spherical_distortion.util import *
 import matplotlib.pyplot as plt
 import math
 
-def multiple_tangentimages(img = 'class_256.jpg', patch = 32, image =384, base_order =2): #BASE_ORDER REGULA O EXTENDIMENTO DE CADA PLANO TANGENTE
+def multiple_tangentimages(img = 'class_256.jpg', patch = 32, image =384, base_order =2, sampling = 'regular'): #BASE_ORDER REGULA O EXTENDIMENTO DE CADA PLANO TANGENTE
 
     scale_factor = 1
     pi_samp = int(image/patch)
 
-    theta   = np.linspace(-np.pi/2, np.pi/2, num = pi_samp, endpoint = False)
-    phi = np.linspace(-np.pi, np.pi, num = pi_samp, endpoint = False)
+    if sampling == 'regular':
+        theta   = np.linspace(-np.pi/2, np.pi/2, num = pi_samp, endpoint = False)
+        phi = np.linspace(-np.pi, np.pi, num = pi_samp, endpoint = False)
+        c, d = np.meshgrid(phi,theta)
+        S = np.stack((c.flat,d.flat),axis=1)
+        S = torch.from_numpy(S.astype('float32'))
+    elif sampling == 'vertex':
+        S = generate_icosphere(base_order).get_vertices()
+        S = convert_3d_to_spherical(S)
+        ind = np.lexsort((S[:,0],S[:,1]))
+        S   = S[ind]
+    elif sampling == 'face':
+        S = generate_icosphere(base_order).get_face_barycenters()
+        S = convert_3d_to_spherical(S)
+        ind = np.lexsort((S[:,0],S[:,1]))
+        S   = S[ind]
 
-    c, d = np.meshgrid(phi,theta)
-    S = np.stack((c.flat,d.flat),axis=1)
-    S = torch.from_numpy(S.astype('float32'))
     points = convert_spherical_to_3d(S)
     tex_image = get_tangent_images(img, scale_factor, base_order, points, patch)
 
     generate_image = np.zeros((image,image,3),dtype='uint8')
-    for i in range(tex_image.shape[1]):
+
+    for i in range(min(tex_image.shape[1],pi_samp*pi_samp)):
         img = tex_image[:, i, ...]
         I2 = torch2numpy(img.byte())
         generate_image[int(patch*(i//pi_samp)):int(patch*(i//pi_samp)+patch),int(patch*(i%pi_samp)):int(patch*(i%pi_samp)+patch),:] = I2
-
 
     return generate_image
 
@@ -76,3 +87,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
