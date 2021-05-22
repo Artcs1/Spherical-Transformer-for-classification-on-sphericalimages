@@ -108,6 +108,55 @@ def get_gnomonic_projection(icosphere,
     S = spherical_coords
     return gnomonic_kernel(S, kh, kw, res_lat, res_lon)
 
+
+def gnomonic_kernel2(spherical_coords, kh, kw, res_lat, res_lon):
+    lon = spherical_coords[..., 0]
+    lat = spherical_coords[..., 1]
+    num_samples = spherical_coords.shape[0]
+
+    # Kernel
+    x = torch.zeros(kh * kw, device = spherical_coords.device)
+    y = torch.zeros(kh * kw, device = spherical_coords.device)
+    for i in range(kh):
+        cur_i = i - (kh // 2)
+        for j in range(kw):
+            cur_j = j - (kw // 2)
+            # Project the sphere onto the tangent plane
+            x[i * kw + j] = cur_j * res_lon
+            y[i * kw + j] = cur_i * res_lat
+
+    # Center the kernel if dimensions are even
+    if kh % 2 == 0:
+        y += res_lat / 2
+    if kw % 2 == 0:
+        x += res_lon / 2
+
+    # Equalize views
+    lat = lat.view(1, num_samples, 1)
+    lon = lon.view(1, num_samples, 1)
+    x = x.view(1, 1, kh * kw)
+    y = y.view(1, 1, kh * kw)
+
+    # Compute the projection back onto sphere
+    rho = (x**2 + y**2).sqrt()
+    nu = rho.atan()
+    out_lat = (nu.cos() * lat.sin() + y * nu.sin() * lat.cos() / rho).asin()
+    out_lon = lon + torch.atan2(
+        x * nu.sin(),
+        rho * lat.cos() * nu.cos() - y * lat.sin() * nu.sin())
+
+    # If kernel has an odd-valued dimension, handle the 0 case which resolves to NaN above
+    if kh % 2 == 1:
+        out_lat[..., [(kh // 2) * kw + kw // 2]] = lat
+    if kw % 2 == 1:
+        out_lon[..., [(kh // 2) * kw + kw // 2]] = lon
+
+    # Compensate for longitudinal wrap around
+    out_lon = ((out_lon + math.pi) % (2 * math.pi)) - math.pi
+
+    # Return (1, num_samples, kh*kw, 2) map at locations given by <spherical_coords>
+    return torch.stack((out_lon, out_lat), -1)
+
 def get_tangent_images(image_path, scale_factor, base_order, points, num_samples, sample_order = 7):
 
     img = load_torch_img(image_path)[:3, ...].float() # inputs/I1.png

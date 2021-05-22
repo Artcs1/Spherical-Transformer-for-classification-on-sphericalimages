@@ -84,8 +84,9 @@ class Transformer(nn.Module):
         return x
 
 class TangentPlane(nn.Module):
-    def __init__(self, base_order, patch_size, mode, samp, scale_factor=1):
+    def __init__(self, points, base_order, patch_size, mode, samp, scale_factor=1):
         super().__init__()
+        self.points       = points
         self.base_order   = base_order
         self.patch        = patch_size
         self.scale_factor = scale_factor
@@ -106,29 +107,9 @@ class TangentPlane(nn.Module):
 
     def forward(self,x):
 
-
         for i in range(x.shape[0]):
             img = x[i,:,:,:]
-
-            if self.mode == 'face':
-                S = generate_icosphere(self.base_order).get_face_barycenters()
-                S = convert_3d_to_spherical(S)
-                ind = np.lexsort((S[:,0],S[:,1]))
-                S   = S[ind]
-            elif self.mode == 'vertex':
-                S = generate_icosphere(self.base_order).get_vertices()
-                S = convert_3d_to_spherical(S)
-                ind = np.lexsort((S[:,0],S[:,1]))
-                S   = S[ind]
-            elif self.mode == 'regular':
-                theta   = np.linspace(-np.pi/2, np.pi/2, num = self.samp, endpoint = False)
-                phi = np.linspace(-np.pi, np.pi, num = self.samp, endpoint = False)
-                c, d = np.meshgrid(phi,theta)
-                S = np.stack((c.flat,d.flat),axis=1)
-                S = torch.from_numpy(S.astype('float32'))
-
-            points = convert_spherical_to_3d(S)
-            tex_image = get_tangent_images2(img, self.base_order, points, self.patch).float()
+            tex_image = get_tangent_images2(img, self.base_order, self.points, self.patch).float()
             tex_image = torch.transpose(tex_image,0,1)
 
             tex_image = tex_image.reshape(-1,self.patch*self.patch*3)
@@ -146,6 +127,25 @@ class ViT_sphere(nn.Module):
         super().__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
+ 
+        if mode == 'face':
+            S = generate_icosphere(base_order).get_face_barycenters()
+            S = convert_3d_to_spherical(S)
+            ind = np.lexsort((S[:,0],S[:,1]))
+            S   = S[ind]
+        elif mode == 'vertex':
+            S = generate_icosphere(base_order).get_vertices()
+            S = convert_3d_to_spherical(S)
+            ind = np.lexsort((S[:,0],S[:,1]))
+            S   = S[ind]
+        elif mode == 'regular':
+            theta   = np.linspace(-np.pi/2, np.pi/2, num = self.samp, endpoint = False)
+            phi = np.linspace(-np.pi, np.pi, num = self.samp, endpoint = False)
+            c, d = np.meshgrid(phi,theta)
+            S = np.stack((c.flat,d.flat),axis=1)
+            S = torch.from_numpy(S.astype('float32'))
+
+        points = convert_spherical_to_3d(S)#.cuda()
 
         if mode == 'face':
             num_patches = 20*(4**base_order)
@@ -165,7 +165,7 @@ class ViT_sphere(nn.Module):
 
 
         self.to_patch_embedding = nn.Sequential(
-            TangentPlane(base_order, patch_height, mode, samp = samp),
+            TangentPlane(points, base_order, patch_height, mode, samp = samp),
             #Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_height, p2 = patch_width),
             nn.Linear(patch_dim, dim),
         )

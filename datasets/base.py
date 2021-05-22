@@ -62,7 +62,7 @@ class BaseDataset(Dataset):
 
     def __getitem__(self, index):
         image = self.load_image(index)
-        image = cv2.resize(image,(224,224), interpolation = cv2.INTER_AREA)
+        image = cv2.resize(image,(self.input_w,self.input_h), interpolation = cv2.INTER_AREA)
         image = np.transpose(image,[2,0,1])
         image = image.astype('float32')
         annotation = self.load_annotation(index)
