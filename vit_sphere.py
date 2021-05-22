@@ -139,8 +139,8 @@ class ViT_sphere(nn.Module):
             ind = np.lexsort((S[:,0],S[:,1]))
             S   = S[ind]
         elif mode == 'regular':
-            theta   = np.linspace(-np.pi/2, np.pi/2, num = self.samp, endpoint = False)
-            phi = np.linspace(-np.pi, np.pi, num = self.samp, endpoint = False)
+            theta   = np.linspace(-np.pi/2, np.pi/2, num = samp, endpoint = False)
+            phi = np.linspace(-np.pi, np.pi, num = samp, endpoint = False)
             c, d = np.meshgrid(phi,theta)
             S = np.stack((c.flat,d.flat),axis=1)
             S = torch.from_numpy(S.astype('float32'))

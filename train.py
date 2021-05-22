@@ -21,13 +21,14 @@ def main():
 
     parser = argparse.ArgumentParser(description='ViT')
     parser.add_argument('--data_dir', default='data/s-mnist')
+    parser.add_argument('--dataset', default='smnist')
     parser.add_argument('--exp_id', default='s2nr-mnist-adam')
     parser.add_argument('--mode', default='normal')
     parser.add_argument('--image_size', default=60)
     parser.add_argument('--patch_size', default=10)
     parser.add_argument('--num_classes', default=10)
     parser.add_argument('--batch', default=64)
-    parser.add_argument('--epochs', default=3)
+    parser.add_argument('--epochs', default=45)
     parser.add_argument('--cuda', default=True)
     parser.add_argument('--optim', default='SGD')
     args = parser.parse_args()
@@ -58,6 +59,7 @@ def main():
             mlp_dim     = 512,
             base_order = 1,
             mode = args.mode, # face, vertex and regular
+            samp = 6,
             dropout     = 0.1,
             emb_dropout = 0.1
         )
@@ -67,9 +69,10 @@ def main():
     epochs  = args.epochs
     batch   = args.batch
     path    = 'weights/'
+    dataset = {'smnist': SMNIST, 'dvsc': DVSC}
 
-    train_data = SMNIST(args.data_dir, 'train', 60, 60, None)
-    valid_data = SMNIST(args.data_dir, 'valid', 60, 60, None)
+    train_data = dataset[args.dataset](args.data_dir, 'train', 60, 60, None)
+    valid_data = dataset[args.dataset](args.data_dir, 'valid', 60, 60, None)
 
     train_loader = DataLoader(dataset=train_data, batch_size=batch, shuffle=True)
     valid_loader = DataLoader(dataset=valid_data, batch_size=batch, shuffle=True)
@@ -145,10 +148,17 @@ def main():
     print(T_L)
     plt.plot(T_L, label = 'Total_loss', color = 'blue')
     plt.plot(V_L, label = 'Valid_loss', color = 'red')
+    plt.legend(loc="upper left")
+    plt.xlabel("num of epochs")
+    plt.ylabel("loss")
     plt.savefig(path+args.exp_id+'Learning_Curves.png')
     plt.clf()
     plt.plot(V_a, label = 'Valid_acc', color = 'cyan')
+    plt.legend(loc="upper left")
+    plt.xlabel("num of epochs")
+    plt.ylabel("accuracy")
     plt.savefig(path+args.exp_id+'Val_acc.png')
+    
 
     
     torch.save({'epoch': epochs,'model_state_dict': model.state_dict(),'optimizer_state_dict': optimizer.state_dict(),}, path+args.exp_id+'model_last.pth')
