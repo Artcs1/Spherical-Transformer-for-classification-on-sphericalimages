@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--patch_size', default=10)
     parser.add_argument('--num_classes', default=10)
     parser.add_argument('--batch', default=64)
-    parser.add_argument('--epochs', default=45)
+    parser.add_argument('--epochs', default=40)
     parser.add_argument('--cuda', default=True)
     parser.add_argument('--optim', default='SGD')
     args = parser.parse_args()
@@ -132,11 +132,11 @@ def main():
         v_l = np.mean(L) 
         v_a = sum_acc.item()/total*100
         
-        if v_a < valid_acc:
+        if v_a > valid_acc:
             valid_acc = v_a
             torch.save({'epoch': epochs,'model_state_dict': model.state_dict(),'optimizer_state_dict': optimizer.state_dict(),}, path+args.exp_id+'model_acc.pth')
 
-        if v_l > valid_loss:
+        if v_l < valid_loss:
             valid_loss = v_l
             torch.save({'epoch': epochs,'model_state_dict': model.state_dict(),'optimizer_state_dict': optimizer.state_dict(),}, path+args.exp_id+'model_loss.pth')
 
