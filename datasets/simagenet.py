@@ -25,7 +25,6 @@ class SIMAGENET(BaseDataset):
 
     def load_image(self, index):
         img_id  = self.image_ids[index]
-        print(img_id)
         imgFile = os.path.join(self.image_path, img_id)
         assert os.path.exists(imgFile), 'image {} not existed'.format(imgFile)
         img = Image.open(imgFile).convert('RGB')
@@ -33,7 +32,7 @@ class SIMAGENET(BaseDataset):
 
     def load_img_ids(self):
      
-        image_lists = list(pd.read_csv('~/projects/sphere_projection/sph_imagenet_5k.csv')['file'])
+        image_lists = list(pd.read_csv('~/projects/sphere_projection/sph_imagenet.csv')['file'])
         return image_lists
 
     def __len__(self):

@@ -45,7 +45,7 @@ def main():
     parser.add_argument('--image_size', default=60)
     parser.add_argument('--patch_size', default=10)
     parser.add_argument('--num_classes', default=10)
-    parser.add_argument('--batch', default=512)
+    parser.add_argument('--batch', default=1024)
     parser.add_argument('--cuda', default=True)
     parser.add_argument('--output_csv')
     args = parser.parse_args()
