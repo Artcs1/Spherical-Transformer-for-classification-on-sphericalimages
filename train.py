@@ -20,15 +20,12 @@ def main():
 
 
     parser = argparse.ArgumentParser(description='ViT')
-    parser.add_argument('--data_dir', default='data/s-mnist')
-    parser.add_argument('--dataset', default='smnist')
-    parser.add_argument('--exp_id', default='s2nr-mnist-adam')
+    parser.add_argument('--data_dir', default='data/sph_dogs_vs_cats')
+    parser.add_argument('--dataset', default='dvsc')
+    parser.add_argument('--exp_id', default='sdvsc-adam')
     parser.add_argument('--mode', default='normal')
-    parser.add_argument('--image_size', default=60)
-    parser.add_argument('--patch_size', default=10)
-    parser.add_argument('--num_classes', default=10)
-    parser.add_argument('--batch', default=64)
-    parser.add_argument('--epochs', default=40)
+    parser.add_argument('--batch', default=128)
+    parser.add_argument('--epochs', default=10)
     parser.add_argument('--cuda', default=True)
     parser.add_argument('--optim', default='SGD')
     args = parser.parse_args()
@@ -36,11 +33,23 @@ def main():
 
     os.system('mkdir -p weights')
 
+    dataset = {'smnist': SMNIST, 'dvsc': DVSC}
+    if args.dataset == 'smnist':
+        image_size  = 60
+        patch_size  = 10
+        num_classes = 10
+        samp = 6
+    elif args.dataset == 'dvsc':
+        image_size  = 384
+        patch_size  = 32
+        num_classes = 2
+        samp = 12
+
     if args.mode == 'normal':
         model = ViT(
-            image_size  = args.image_size,
-            patch_size  = args.patch_size,
-            num_classes = args.num_classes,
+            image_size  = image_size,
+            patch_size  = patch_size,
+            num_classes = num_classes,
             dim         = 512,
             depth       = 4,
             heads       = 8,
@@ -50,29 +59,33 @@ def main():
         )
     else :
         model = ViT_sphere(
-            image_size  = args.image_size,
-            patch_size  = args.patch_size,
-            num_classes = args.num_classes,
+            image_size  = image_size,
+            patch_size  = patch_size,
+            num_classes = num_classes,
             dim         = 512,
             depth       = 4,
             heads       = 8,
             mlp_dim     = 512,
             base_order = 1,
             mode = args.mode, # face, vertex and regular
-            samp = 6,
+            samp = samp,
             dropout     = 0.1,
             emb_dropout = 0.1
         )
     
+    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in model_parameters])
+
+    print("Trainable parameters", params)
+
 
     cuda    = args.cuda
     epochs  = args.epochs
     batch   = args.batch
     path    = 'weights/'
-    dataset = {'smnist': SMNIST, 'dvsc': DVSC}
 
-    train_data = dataset[args.dataset](args.data_dir, 'train', 60, 60, None)
-    valid_data = dataset[args.dataset](args.data_dir, 'valid', 60, 60, None)
+    train_data = dataset[args.dataset](args.data_dir, 'train', image_size, image_size, None)
+    valid_data = dataset[args.dataset](args.data_dir, 'valid', image_size, image_size, None)
 
     train_loader = DataLoader(dataset=train_data, batch_size=batch, shuffle=True)
     valid_loader = DataLoader(dataset=valid_data, batch_size=batch, shuffle=True)
@@ -106,7 +119,7 @@ def main():
                 target = target.cuda()
             preds = model(img)
             output = cla_loss(preds, target)
-            L.append(output.item())
+            L.append(output.cpu().item())
             output.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -124,7 +137,7 @@ def main():
                 target = target.cuda()
             preds = model(img)
             L.append(cla_loss(preds,target).item())
-            probabilities = torch.nn.functional.softmax(preds, dim=0)
+            probabilities = torch.nn.functional.softmax(preds, dim=1)
             preds = torch.argmax(probabilities, dim =1)
             acc   = torch.sum(torch.where(preds == target, torch.tensor(1, device = preds.device), torch.tensor(0, device = preds.device)))
             sum_acc +=acc

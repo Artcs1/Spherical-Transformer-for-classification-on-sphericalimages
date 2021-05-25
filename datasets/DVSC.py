@@ -13,7 +13,7 @@ class DVSC(BaseDataset):
 
     def __init__(self, data_dir, phase, input_h, input_w, down_ratio):
         super(DVSC, self).__init__(data_dir, phase, input_h, input_w, down_ratio)
-        self.category    = ['dog', 'cat']
+        self.category    = ['cat', 'dog']
         self.num_classes = len(self.category)
         self.cat_ids     = {cat:i for i,cat in enumerate(self.category)}
         self.image_ids   = self.load_img_ids()
