@@ -104,6 +104,7 @@ def get_gnomonic_projection(icosphere,
     returns 1 x {F,V} x kh*kw x 2 sampling map per mesh element in spherical coords
     '''
 
+    points = points#.cuda()
     spherical_coords = convert_3d_to_spherical(points)
     S = spherical_coords
     return gnomonic_kernel(S, kh, kw, res_lat, res_lon)

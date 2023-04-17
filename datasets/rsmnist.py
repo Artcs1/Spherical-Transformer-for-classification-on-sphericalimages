@@ -9,14 +9,14 @@ import os
 
 from torch.utils.data import Dataset
 
-class SMNIST(BaseDataset):
+class RSMNIST(BaseDataset):
 
     def __init__(self, data_dir, phase, input_h, input_w, down_ratio):
-        super(SMNIST, self).__init__(data_dir, phase, input_h, input_w, down_ratio)
+        super(RSMNIST, self).__init__(data_dir, phase, input_h, input_w, down_ratio)
         self.category    = ['0', '1','2','3','4','5','6','7','8','9']
         self.num_classes = len(self.category)
         self.cat_ids     = {cat:i for i,cat in enumerate(self.category)}
-        self.I           = np.load(self.data_dir+'/s2_nr_mnist', allow_pickle=True)
+        self.I           = np.load(self.data_dir+'/s2_r_mnist', allow_pickle=True)
         self.image_ids   = self.load_img_ids()
         self.len         = len(self.image_ids)
         self.image_path  = data_dir

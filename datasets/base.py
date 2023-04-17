@@ -6,7 +6,7 @@ import numpy as np
 import math
 
 class BaseDataset(Dataset):
-    def __init__(self, data_dir, phase, input_h=None, input_w=None, down_ratio=None):
+    def __init__(self, data_dir, phase, input_h=None, input_w=None, down_ratio=None, transform = None):
         super(BaseDataset, self).__init__()
         self.data_dir    = data_dir
         self.phase       = phase
@@ -15,6 +15,7 @@ class BaseDataset(Dataset):
         self.down_ratio  = down_ratio
         self.img_ids     = None
         self.num_classes = None
+        self.transform   = transform
 
     def load_img_ids(self):
         """
@@ -62,8 +63,12 @@ class BaseDataset(Dataset):
 
     def __getitem__(self, index):
         image = self.load_image(index)
+        #print(image.shape)
+        if self.transform:
+            image = self.transform(image)
         image = cv2.resize(image,(self.input_w,self.input_h), interpolation = cv2.INTER_AREA)
         image = np.transpose(image,[2,0,1])
         image = image.astype('float32')
         annotation = self.load_annotation(index)
+        #print(annotation)
         return image, annotation

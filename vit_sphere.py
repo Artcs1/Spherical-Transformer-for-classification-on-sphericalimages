@@ -100,30 +100,32 @@ class TangentPlane(nn.Module):
             for i in range(base_order):
                 num_patches += 30*(4**(base_order-1))
         elif mode == 'regular':
-            num_patches = self.samp*self.samp
+            num_patches = self.samp[0]*self.samp[1]
 
         self.num_patches  = num_patches
 
 
     def forward(self,x):
-
+        #print('x.shape')
+        #print(x.shape)
         for i in range(x.shape[0]):
             img = x[i,:,:,:]
             tex_image = get_tangent_images2(img, self.base_order, self.points, self.patch).float()
             tex_image = torch.transpose(tex_image,0,1)
 
-            tex_image = tex_image.reshape(-1,self.patch*self.patch*3)
+            tex_image = tex_image.reshape(-1,self.patch*self.patch*x.shape[1])
             if i == 0:
                 O = tex_image
             else:
                 O = torch.cat((O,tex_image),0)
-        O = O.view(-1, self.num_patches,self.patch*self.patch*3)
+        O = O.view(-1, self.num_patches,self.patch*self.patch*x.shape[1])
+        #print(O.shape)
         O = O.float()
         return O
 
 
 class ViT_sphere(nn.Module):
-    def __init__(self, *, image_size, patch_size, num_classes, dim, depth, heads, mlp_dim, base_order, mode = 'face', samp = 14, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0.):
+    def __init__(self, *, image_size, patch_size, num_classes, dim, depth, heads, mlp_dim, base_order, mode = 'face', samp = (12, 12), pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0.):
         super().__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
@@ -139,13 +141,13 @@ class ViT_sphere(nn.Module):
             ind = np.lexsort((S[:,0],S[:,1]))
             S   = S[ind]
         elif mode == 'regular':
-            theta   = np.linspace(-np.pi/2, np.pi/2, num = samp, endpoint = False)
-            phi = np.linspace(-np.pi, np.pi, num = samp, endpoint = False)
+            theta   = np.linspace(-np.pi/2, np.pi/2, num = samp[0], endpoint = False)
+            phi = np.linspace(-np.pi, np.pi, num = samp[1], endpoint = False)
             c, d = np.meshgrid(phi,theta)
             S = np.stack((c.flat,d.flat),axis=1)
             S = torch.from_numpy(S.astype('float32'))
 
-        points = convert_spherical_to_3d(S)#.cuda()
+        points = convert_spherical_to_3d(S).cuda()
 
         if mode == 'face':
             num_patches = 20*(4**base_order)
@@ -154,7 +156,7 @@ class ViT_sphere(nn.Module):
             for i in range(base_order):
                 num_patches += 30*(4**(base_order-1))
         elif mode =='regular':
-            num_patches = samp*samp
+            num_patches = samp[0]*samp[1]
 
 
         # num_patches = (image_height // patch_height) * (image_width // patch_width)
@@ -186,6 +188,7 @@ class ViT_sphere(nn.Module):
 
     def forward(self, img):
         x = self.to_patch_embedding(img)
+        #print(x.shape)
         b, n, _ = x.shape
 
         cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
