@@ -199,7 +199,7 @@ def main():
 
 
     parser = argparse.ArgumentParser(description='ViT')
-    parser.add_argument('--dataset', default='rsmnist')
+    parser.add_argument('--dataset', default='modelnet10')
     parser.add_argument('--set', default = 'test')
     parser.add_argument('--mode', default='face')
     parser.add_argument('--batch', default=8)

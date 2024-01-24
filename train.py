@@ -226,12 +226,12 @@ def main():
 
 
     parser = argparse.ArgumentParser(description='ViT')
-    parser.add_argument('--dataset', default='rsmnist')
+    parser.add_argument('--dataset', default='modelnet10')
     parser.add_argument('--mode', default='face')
     parser.add_argument('--batch', default=16)
     parser.add_argument('--epochs', default=500)
     parser.add_argument('--cuda', default=True)
-    parser.add_argument('--optim', default='AdamW')
+    parser.add_argument('--optim', default='Adam')
     args = parser.parse_args()
 
     if torch.cuda.is_available():
