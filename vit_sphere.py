@@ -27,23 +27,6 @@ def pair(t):
 
 # classes
 
-class PatchShifting(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-
-
-        print(x.shape)
-        rot_1 = Deterministic_Rotate(0,15,0)
-        x1    = torch.from_numpy(rot_1(x.cpu().numpy())).cuda()
-
-        print(x1.shape)
-
-        x_cat = torch.cat([x,x1,x,x,x], dim = 1)
-        out = x_cat
-        return out
-
 class PreNorm(nn.Module):
     def __init__(self, dim, fn):
         super().__init__()
@@ -231,13 +214,7 @@ class ViT_sphere(nn.Module):
 
     def forward(self, img):
 
-        #if self.is_shifted == True:
-        #    img = self.patch_shifting(img)
-        #print(img_.shape)
-        #print(img.shape)
-
         x = self.to_patch_embedding(img)
-        #print(x.shape)
         b, n, _ = x.shape
 
         cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)

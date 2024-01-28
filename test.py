@@ -54,7 +54,8 @@ def main():
 
     parser = argparse.ArgumentParser(description='ViT')
     parser.add_argument('--dataset', default='modelnet10')
-    parser.add_argument('--set', default = 'test')
+    parser.add_argument('--shift', default=True)
+    parser.add_argument('--set', default='test')
     parser.add_argument('--mode', default='face')
     parser.add_argument('--batch', default=8)
     parser.add_argument('--tta', default=1, type=int)
@@ -119,13 +120,18 @@ def main():
             depth       = 4,
             heads       = 8,
             mlp_dim     = 512,
-            base_order = 1,
-            mode = args.mode, # face, vertex and regular
-            samp = samp,
-            channels = channels,
+            base_order  = 1,
+            mode        = args.mode, # face, vertex and regular
+            samp        = samp,
+            channels    = channels,
             dropout     = 0.1,
             emb_dropout = 0.1
         )
+
+    if args.shift == True:
+        channels*=5
+
+
 
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
