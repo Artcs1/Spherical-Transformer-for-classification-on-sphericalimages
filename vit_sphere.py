@@ -197,7 +197,6 @@ class ViT_sphere(nn.Module):
         )
 
         self.is_shifted = is_shifted
-        self.patch_shifting = PatchShifting()
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
