@@ -5,8 +5,10 @@ import torch
 import numpy as np
 import math
 
+from utils import Deterministic_Rotate
+
 class BaseDataset(Dataset):
-    def __init__(self, data_dir, phase, input_h=None, input_w=None, down_ratio=None, transform = None):
+    def __init__(self, data_dir, phase, input_h=None, input_w=None, down_ratio=None, transform = None, shifted = False):
         super(BaseDataset, self).__init__()
         self.data_dir    = data_dir
         self.phase       = phase
@@ -16,6 +18,7 @@ class BaseDataset(Dataset):
         self.img_ids     = None
         self.num_classes = None
         self.transform   = transform
+        self.shifted     = shifted
 
     def load_img_ids(self):
         """
@@ -61,14 +64,38 @@ class BaseDataset(Dataset):
         return out_image
 
 
+    def shifting_process(self, image):
+
+        rot_1 = Deterministic_Rotate(0,15,0)
+        x1    = rot_1(image)
+
+        rot_2 = Deterministic_Rotate(0,0,15)
+        x2    = rot_2(image)
+
+        rot_3 = Deterministic_Rotate(0,-15,0)
+        x3    = rot_3(image)
+
+        rot_4 = Deterministic_Rotate(0,0,-15)
+        x4    = rot_4(image)
+
+        image = np.concatenate([image, x1, x2, x3, x4])
+
+        return image
+
     def __getitem__(self, index):
         image = self.load_image(index)
-        #print(image.shape)
+        image = image.astype('float32')
+
         if self.transform:
             image = self.transform(image)
         image = cv2.resize(image,(self.input_w,self.input_h), interpolation = cv2.INTER_AREA)
         image = np.transpose(image,[2,0,1])
         image = image.astype('float32')
+
+        if self.shifted == True:
+            image = self.shifting_process(image)
+
+        image = image.astype('float32')
         annotation = self.load_annotation(index)
-        #print(annotation)
+
         return image, annotation

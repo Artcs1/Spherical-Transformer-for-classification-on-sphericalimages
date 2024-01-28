@@ -10,12 +10,39 @@ from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 
 import matplotlib.pyplot as plt
+
+from utils import GaussianBlur
+from utils import GaussianNoise
+from utils import Cutout
+from utils import CircularHorizontalShift
+from utils import Rotate
+
+from utils import Deterministic_Rotate
+
+
 # helpers
 
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
 # classes
+
+class PatchShifting(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+
+
+        print(x.shape)
+        rot_1 = Deterministic_Rotate(0,15,0)
+        x1    = torch.from_numpy(rot_1(x.cpu().numpy())).cuda()
+
+        print(x1.shape)
+
+        x_cat = torch.cat([x,x1,x,x,x], dim = 1)
+        out = x_cat
+        return out
 
 class PreNorm(nn.Module):
     def __init__(self, dim, fn):
@@ -39,10 +66,11 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 class Attention(nn.Module):
-    def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0.):
+    def __init__(self, dim, num_patches, heads = 8, dim_head = 64, dropout = 0., is_LSA = False):
         super().__init__()
         inner_dim = dim_head *  heads
         project_out = not (heads == 1 and dim_head == dim)
+        self.num_patches = num_patches
 
         self.heads = heads
         self.scale = dim_head ** -0.5
@@ -55,12 +83,25 @@ class Attention(nn.Module):
             nn.Dropout(dropout)
         ) if project_out else nn.Identity()
 
+        if is_LSA:
+            self.scale = nn.Parameter(self.scale*torch.ones(heads))    
+            self.mask = torch.eye(self.num_patches+1, self.num_patches+1)
+            self.mask = torch.nonzero((self.mask == 1), as_tuple=False)
+        else:
+            self.mask = None
+
     def forward(self, x):
         b, n, _, h = *x.shape, self.heads
         qkv = self.to_qkv(x).chunk(3, dim = -1)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = h), qkv)
 
-        dots = einsum('b h i d, b h j d -> b h i j', q, k) * self.scale
+
+        if self.mask is None:
+            dots = einsum('b h i d, b h j d -> b h i j', q, k) * self.scale
+        else:
+            scale = self.scale
+            dots = torch.mul(einsum('b h i d, b h j d -> b h i j', q, k), scale.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand((b, h, 1, 1)))
+            dots[:, :, self.mask[:, 0], self.mask[:, 1]] = -987654321
 
         attn = self.attend(dots)
 
@@ -69,12 +110,12 @@ class Attention(nn.Module):
         return self.to_out(out)
 
 class Transformer(nn.Module):
-    def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout = 0.):
+    def __init__(self, dim, num_patches, depth, heads, dim_head, mlp_dim, dropout = 0., is_LSA = False):
         super().__init__()
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                PreNorm(dim, Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout)),
+                PreNorm(dim, Attention(dim, num_patches, heads = heads, dim_head = dim_head, dropout = dropout, is_LSA = is_LSA)),
                 PreNorm(dim, FeedForward(dim, mlp_dim, dropout = dropout))
             ]))
     def forward(self, x):
@@ -125,7 +166,7 @@ class TangentPlane(nn.Module):
 
 
 class ViT_sphere(nn.Module):
-    def __init__(self, *, image_size, patch_size, num_classes, dim, depth, heads, mlp_dim, base_order, mode = 'face', samp = (12, 12), pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0.):
+    def __init__(self, *, image_size, patch_size, num_classes, dim, depth, heads, mlp_dim, base_order, mode = 'face', samp = (12, 12), pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0., is_shifted = False, is_LSA=False):
         super().__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
@@ -172,11 +213,13 @@ class ViT_sphere(nn.Module):
             nn.Linear(patch_dim, dim),
         )
 
+        self.is_shifted = is_shifted
+        self.patch_shifting = PatchShifting()
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
-        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
+        self.transformer = Transformer(dim, num_patches, depth, heads, dim_head, mlp_dim, dropout, is_LSA=is_LSA)
 
         self.pool = pool
         self.to_latent = nn.Identity()
@@ -187,6 +230,12 @@ class ViT_sphere(nn.Module):
         )
 
     def forward(self, img):
+
+        #if self.is_shifted == True:
+        #    img = self.patch_shifting(img)
+        #print(img_.shape)
+        #print(img.shape)
+
         x = self.to_patch_embedding(img)
         #print(x.shape)
         b, n, _ = x.shape

@@ -12,8 +12,8 @@ from torch.utils.data import Dataset
 
 class MODELNET10(BaseDataset):
 
-    def __init__(self, data_dir, phase, input_h, input_w, down_ratio, transform):
-        super(MODELNET10, self).__init__(data_dir, phase, input_h, input_w, down_ratio, transform)
+    def __init__(self, data_dir, phase, input_h, input_w, down_ratio, transform, shifted):
+        super(MODELNET10, self).__init__(data_dir, phase, input_h, input_w, down_ratio, transform, shifted)
         self.category    = ['bathtub', 'bed', 'chair', 'desk', 'dresser', 'monitor', 'night_stand', 'sofa', 'table' , 'toilet']
         self.num_classes = len(self.category)
         self.cat_ids     = {cat:i for i,cat in enumerate(self.category)}
