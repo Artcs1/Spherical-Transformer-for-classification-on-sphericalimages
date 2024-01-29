@@ -55,6 +55,7 @@ def main():
     parser = argparse.ArgumentParser(description='ViT')
     parser.add_argument('--dataset', default='modelnet10')
     parser.add_argument('--shift', default=True)
+    parser.add_argument('--is_LSA', default=True)
     parser.add_argument('--set', default='test')
     parser.add_argument('--mode', default='face')
     parser.add_argument('--batch', default=8)
@@ -97,6 +98,9 @@ def main():
         samp = (12, 12)
         channels = 3
 
+    if args.shift == True:
+        channels*=5
+
     resume      = args.dataset+'-'+args.mode+'model_last.pth'
 
     if args.mode == 'normal':
@@ -125,11 +129,12 @@ def main():
             samp        = samp,
             channels    = channels,
             dropout     = 0.1,
-            emb_dropout = 0.1
+            emb_dropout = 0.1,
+            is_shifted  = args.shift,
+            is_LSA      = args.is_LSA
+ 
         )
 
-    if args.shift == True:
-        channels*=5
 
 
 
